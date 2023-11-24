@@ -1,6 +1,12 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
 
 import static java.lang.Thread.sleep;
 
@@ -15,10 +21,12 @@ class Semaphore{
         if(value < 0)
         {
             System.out.println(d.name +'('+d.type+')' + " arrived and waiting");
+            Network.write(d.name +'('+d.type+')' + " arrived and waiting");
             wait();
         }
         else {
             System.out.println(d.name +'('+d.type+')' + " arrived");
+            Network.write(d.name +'('+d.type+')' + " arrived");
         }
 
     }
@@ -36,35 +44,35 @@ class Semaphore{
 
 //  --------------------------------------------------------------------------------------------------------------------
 class Router{
-    public final Semaphore semaphore;
-    private final List<Device> connections;
-    private int maxConnections;
+        public final Semaphore semaphore;
+        private final boolean[] connections;
+        private final int maxConnections;
 
-    Router(int n){
-        this.maxConnections = n;
-        this.semaphore = new Semaphore(n);
-        this.connections = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            connections.add(null);
+        Router(int n){
+            this.maxConnections = n;
+            this.semaphore = new Semaphore(n);
+            this.connections = new boolean[n];
         }
-    }
     int occupyConnection(Device device)throws InterruptedException{
+        semaphore.wait(device);
         for (int i = 0; i < maxConnections; i++) {
-            if (connections.get(i) == null) {
-                connections.set(i, device);
+            if (!connections[i]) {
+                connections[i] = true;
                 device.connectionID = i + 1;
                 break;
             }
         }
-        semaphore.wait(device);
         return device.connectionID;
     }
 
 
-    void releaseConnection(Device device){
-        connections.set(device.connectionID - 1, null);
-        System.out.println("Connection " + device.connectionID + ": " + device.name + " logged out");
+    void releaseConnection(Device device) throws InterruptedException {
         semaphore.signal(device);
+        connections[device.connectionID-1] =  false;
+        System.out.println("Connection " + device.connectionID + ": " + device.name + " logged out");
+        Network.write("Connection " + device.connectionID + ": " + device.name + " logged out");
+        sleep((long) (Math.random()* 1000));
+
     }
 
 }
@@ -82,10 +90,19 @@ class Device extends Thread{
     }
     public void run() {
         try{
-            int connectionInd = router.occupyConnection(this);
-            System.out.println("Connection " + connectionInd + ": " + this.name + " Occupied");
-            System.out.println("Connection " +  connectionInd + ": " + this.name + " login");
-            System.out.println("Connection " +  connectionInd + ": " + this.name + " performs online activity");
+            this.connectionID = router.occupyConnection(this);
+            sleep((long) (Math.random()* 1000));
+            System.out.println("Connection " + connectionID + ": " + this.name + " Occupied");
+            Network.write("Connection " + connectionID + ": " + this.name + " Occupied");
+
+
+            sleep((long) (Math.random()* 1000));
+            System.out.println("Connection " +  connectionID + ": " + this.name + " login");
+            Network.write("Connection " +  connectionID + ": " + this.name + " login");
+            System.out.println("Connection " +  connectionID + ": " + this.name + " performs online activity");
+
+            Network.write("Connection " +  connectionID + ": " + this.name + " performs online activity");
+            sleep((long) (Math.random()* 1000));
             router.releaseConnection(this);
         }
         catch(InterruptedException ex){
@@ -119,7 +136,26 @@ class Network{
             devices.get(i).start();
         }
     }
+    public static void write(String content){
+        try{
+            Path path = Paths.get(System.getProperty("user.dir") + "\\logs.txt") ;
+            File file = new File(path.toString()) ;
+
+            if (!file.exists()){
+                if (!file.createNewFile()){
+                    System.out.println("Error in creating the file");
+                }
+            }
+            Files.write(path, (content + '\n').getBytes(), StandardOpenOption.APPEND);
+        }
+        catch (IOException e){
+            System.out.println(e.getMessage());
+        }
+    }
 
 }
+
+
 //----------------------------------------------------------------------------------------------------------------------
+
 
