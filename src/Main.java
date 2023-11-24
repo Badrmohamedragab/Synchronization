@@ -15,6 +15,7 @@ class Semaphore{
     Semaphore(int value)
     {
         this.value = value;
+
     }
     synchronized void wait(Device d) throws InterruptedException {
         value--;
