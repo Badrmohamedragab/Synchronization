@@ -1,2 +1,4 @@
 # Synchronization
-This repository contains a variety of tools and resources for compression and decompression algorithms.
+It is required to simulate a limited number of devices connected to a router’s Wi-Fi
+using Java threading and semaphore. Routers can be designed to limit the number of
+open connections.
