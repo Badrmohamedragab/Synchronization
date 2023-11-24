@@ -40,26 +40,19 @@ class Router{
     private final List<Device> connections;
     private int maxConnections;
 
-
-    //----------------------------------------------------------------
-
     Router(int n){
         this.maxConnections = n;
         this.semaphore = new Semaphore(n);
-        this.connections = new ArrayList<Device>(n);
+        this.connections = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             connections.add(null);
         }
     }
-
-    //----------------------------------------------------------------
-
     int occupyConnection(Device device)throws InterruptedException{
         for (int i = 0; i < maxConnections; i++) {
             if (connections.get(i) == null) {
                 connections.set(i, device);
                 device.connectionID = i + 1;
-                sleep(100);
                 break;
             }
         }
@@ -67,7 +60,6 @@ class Router{
         return device.connectionID;
     }
 
-    //----------------------------------------------------------------
 
     void releaseConnection(Device device){
         connections.set(device.connectionID - 1, null);
@@ -91,10 +83,9 @@ class Device extends Thread{
     public void run() {
         try{
             int connectionInd = router.occupyConnection(this);
-            System.out.println("Connection " + this.connectionID + ": " + this.name + " Occupied");
-            System.out.println("Connection " +  this.connectionID + ": " + this.name + " login");
-            System.out.println("Connection " +  this.connectionID + ": " + this.name + " performs online activity");
-            sleep(100);
+            System.out.println("Connection " + connectionInd + ": " + this.name + " Occupied");
+            System.out.println("Connection " +  connectionInd + ": " + this.name + " login");
+            System.out.println("Connection " +  connectionInd + ": " + this.name + " performs online activity");
             router.releaseConnection(this);
         }
         catch(InterruptedException ex){
@@ -104,13 +95,31 @@ class Device extends Thread{
 }
 //----------------------------------------------------------------------------------------------------------------------
 class Network{
+    public static void main(String[] args) throws InterruptedException {
+        int numOfConnections, numOfDevices;
+        ArrayList<Device> devices = new ArrayList<>();
+        System.out.println("What is the number of WI-FI Connections?");
+        Scanner scanner= new Scanner(System.in);
+        numOfConnections = scanner.nextInt();
+        Router router = new Router(numOfConnections);
+
+        System.out.println("What is the number of devices Clients want to connect?");
+        numOfDevices = scanner.nextInt();
+
+        for(int i = 0; i < numOfDevices ; i++)
+        {
+            String name, type;
+            name = scanner.next();
+            type = scanner.next();
+            Device device = new Device(name, type, router);
+            devices.add(device);
+        }
+        for (int i = 0 ; i < devices.size(); i++ )
+        {
+            devices.get(i).start();
+        }
+    }
 
 }
-
 //----------------------------------------------------------------------------------------------------------------------
 
-public class Main {
-    public static void main(String[] args) throws InterruptedException{
-
-    }
-}
