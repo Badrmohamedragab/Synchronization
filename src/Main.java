@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import static java.lang.Thread.sleep;
 
@@ -9,7 +10,7 @@ class Semaphore{
     {
         this.value = value;
     }
-    void wait(Device d) throws InterruptedException {
+    synchronized void wait(Device d) throws InterruptedException {
         value--;
         if(value < 0)
         {
@@ -21,7 +22,7 @@ class Semaphore{
         }
 
     }
-    void signal(Device d)
+    synchronized void signal(Device d)
     {
         value++;
         if (value <= 0)
@@ -35,7 +36,7 @@ class Semaphore{
 
 //  --------------------------------------------------------------------------------------------------------------------
 class Router{
-    private final Semaphore semaphore;
+    public final Semaphore semaphore;
     private final List<Device> connections;
     private int maxConnections;
 
@@ -43,37 +44,63 @@ class Router{
     //----------------------------------------------------------------
 
     Router(int n){
-        this.semaphore = new Semaphore(maxConnections);
         this.maxConnections = n;
-        this.connections = new ArrayList<Device>(maxConnections);
+        this.semaphore = new Semaphore(n);
+        this.connections = new ArrayList<Device>(n);
+        for (int i = 0; i < n; i++) {
+            connections.add(null);
+        }
     }
 
     //----------------------------------------------------------------
 
-    void occupyConnection(Device device)throws InterruptedException{
-        if(connections.size() < maxConnections){
-            connections.add(device);
+    int occupyConnection(Device device)throws InterruptedException{
+        for (int i = 0; i < maxConnections; i++) {
+            if (connections.get(i) == null) {
+                connections.set(i, device);
+                device.connectionID = i + 1;
+                sleep(100);
+                break;
+            }
         }
         semaphore.wait(device);
-        sleep(100);
-
+        return device.connectionID;
     }
 
     //----------------------------------------------------------------
 
     void releaseConnection(Device device){
-        
-        if(!connections.isEmpty()){
-            connections.remove(device);
-        }
+        connections.set(device.connectionID - 1, null);
+        System.out.println("Connection " + device.connectionID + ": " + device.name + " logged out");
         semaphore.signal(device);
-        notify();
     }
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-class Device {
+class Device extends Thread{
+    String type, name;
+    int connectionID;
+    Router router;
+    Device(String name, String type, Router router){
+        this.name = name;
+        this.type = type;
+        this.router = router;
+        this.connectionID = 1;
+    }
+    public void run() {
+        try{
+            int connectionInd = router.occupyConnection(this);
+            System.out.println("Connection " + this.connectionID + ": " + this.name + " Occupied");
+            System.out.println("Connection " +  this.connectionID + ": " + this.name + " login");
+            System.out.println("Connection " +  this.connectionID + ": " + this.name + " performs online activity");
+            sleep(100);
+            router.releaseConnection(this);
+        }
+        catch(InterruptedException ex){
 
+        }
+    }
 }
 //----------------------------------------------------------------------------------------------------------------------
 class Network{
@@ -83,7 +110,7 @@ class Network{
 //----------------------------------------------------------------------------------------------------------------------
 
 public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello world!");
+    public static void main(String[] args) throws InterruptedException{
+
     }
 }
