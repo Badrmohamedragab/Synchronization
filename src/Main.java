@@ -1,10 +1,7 @@
+import java.util.ArrayList;
 import java.util.List;
 
-class Router{
-    List<Device> connections;
-}
-
-//  --------------------------------------------------------------------------------------------------------------------
+import static java.lang.Thread.sleep;
 
 class Semaphore{
     int value ;
@@ -34,6 +31,44 @@ class Semaphore{
     }
 
 
+}
+
+//  --------------------------------------------------------------------------------------------------------------------
+class Router{
+    private final Semaphore semaphore;
+    private final List<Device> connections;
+    private int maxConnections;
+
+
+    //----------------------------------------------------------------
+
+    Router(int n){
+        this.semaphore = new Semaphore(maxConnections);
+        this.maxConnections = n;
+        this.connections = new ArrayList<Device>(maxConnections);
+    }
+
+    //----------------------------------------------------------------
+
+    void occupyConnection(Device device)throws InterruptedException{
+        if(connections.size() < maxConnections){
+            connections.add(device);
+        }
+        semaphore.wait(device);
+        sleep(100);
+
+    }
+
+    //----------------------------------------------------------------
+
+    void releaseConnection(Device device){
+        
+        if(!connections.isEmpty()){
+            connections.remove(device);
+        }
+        semaphore.signal(device);
+        notify();
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
